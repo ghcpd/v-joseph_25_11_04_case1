@@ -1,0 +1,13 @@
+1. README.md (Installation section): Instructs `pip install datasync`, but the local library is provided directly in the repository. Following the instruction and running the usage example results in `ModuleNotFoundError: No module named 'datasync'` even after installation, because the published package does not expose this project code. The correct guidance is to install dependencies from source or ensure the package path is on PYTHONPATH.
+
+2. README.md (Usage example): Uses `from datasync import SyncManager`, but `datasync/__init__.py` is empty (line 1) and `SyncManager` is defined in `sync.py` (line 3). Importing as written raises `ImportError`. Correct import is `from datasync.sync import SyncManager` or updating `__init__.py` to expose the class.
+
+3. README.md (Usage example): Instantiates `SyncManager(batch_size=50, retry_limit=3)`. The actual signature in `sync.py` line 4 is `SyncManager(chunk_size: int = 100, retry_limit: int = MAX_RETRIES, enable_cache: bool = False)`. Parameter name should be `chunk_size`, default is 100, and default retry limit is `MAX_RETRIES` (10). Documentation defaults and parameter names are incorrect.
+
+4. README.md (Usage example & API reference): Calls `manager.connect(remote_url="https://example.com/data", timeout=1.5)`. Implementation in `sync.py` line 12 requires an additional `auth_token` argument and default timeout is `2`. README omits mandatory parameter and reports wrong default.
+
+5. README.md (Usage example & API reference): Calls `manager.push(..., async_mode=True)` and documents signature `push(data: dict, async_mode: bool = True)`. Implementation in `sync.py` line 20 defines `push(data: dict, mode: str = "sync")` with allowed values `"sync"` or `"async"`, default `"sync"`. Parameter name, type, valid values, and default all differ from documentation.
+
+6. README.md (Usage example): Prints `manager.synced_count`, but `SyncManager` exposes only `get_synced_count()` and stores the counter in `_synced` (sync.py lines 7 & 26). Attribute `synced_count` does not exist, so the sample raises `AttributeError` in practice.
+
+7. README.md (API reference for SyncManager.batch_size range): States accepted range is 10-100. Implementation enforces 1-500 (`sync.py` lines 5-6). Documented range is incorrect.
