@@ -1,0 +1,35 @@
+Defects and documentation inconsistencies identified on 2025-11-04
+=================================================================
+
+1. Installation instructions in `README.md` direct users to run `pip install datasync`. Executing this command installs the third-party PyPI package (`datasync-0.0.1.dev0`), whose public API does not expose `SyncManager`. The bundled README example therefore fails with `ImportError: cannot import name 'SyncManager' from 'datasync'`. The repository actually provides its own modules (`sync.py`, `config.py`, `metrics.py`) and lacks packaging metadata to be published. Users must run code from this repository instead of installing the unrelated PyPI package.  
+   • Evidence: Terminal output from `python -c "from datasync import SyncManager" ...` (see execution log above) shows import failing with the site-packages path.  
+   • Code reference: Repository layout (`__init__.py`, `sync.py`) contains no export for `SyncManager`.
+
+2. `README.md` Usage Example (`from datasync import SyncManager`) contradicts the implementation. `datasync/__init__.py` is empty and does not re-export `SyncManager`. The manager class lives in `sync.py` and becomes addressable via `datasync.sync.SyncManager` only after the repository is installed as a package. As-is, `from datasync import SyncManager` raises `ImportError`.  
+   • Code reference: `__init__.py` (empty file) and `sync.py` line 3 (`class SyncManager`).
+
+3. Constructor signature mismatch. README documents `SyncManager(batch_size: int = 50, retry_limit: int = 3, enable_cache: bool = False)` with batch size restricted to 10–100. Actual implementation (`sync.py`, lines 3-12) defines `__init__(self, chunk_size: int = 100, retry_limit: int = MAX_RETRIES, enable_cache: bool = False)` and enforces `1 <= chunk_size <= 500`. Default `retry_limit` pulls from `config.MAX_RETRIES` (=10), not 3.  
+   • Code reference: `sync.py` lines 3-12 and `config.py` line 1.
+
+4. `connect` API documentation is out of date. README lists `connect(remote_url: str, timeout: float = 1.5)` but the actual signature is `connect(self, remote_url: str, auth_token: str, timeout: int = 2)` (`sync.py`, lines 14-22). The documented call omits the mandatory `auth_token` argument and uses a different default and type for `timeout` (float 1.5 vs integer 2).  
+   • Code reference: `sync.py` lines 14-22.
+
+5. `push` API documentation mismatch. README describes `push(data: dict, async_mode: bool = True)` while `SyncManager.push` is defined as `push(self, data: dict, mode: str = "sync")` and only accepts values `"sync"` or `"async"` (`sync.py`, lines 24-30). The boolean name `async_mode` and default `True` are incorrect.  
+   • Code reference: `sync.py` lines 24-30.
+
+6. Return value omission. README suggests `push` is purely side-effectful and the usage example ignores a return value. In reality `push` returns a dictionary `{"status": "ok", "count": self._synced}`. This behavior is undocumented and leads to lost status information.  
+   • Code reference: `sync.py` lines 28-30.
+
+7. README example refers to `manager.synced_count`, but the class only exposes `get_synced_count()` (and an internal `_synced` attribute). Attempting to access `manager.synced_count` raises `AttributeError`.  
+   • Code reference: `sync.py` lines 7 and 32-33.
+
+8. README claim "batch_size must be between 10 and 100" conflicts with the constructor validation `if not (1 <= chunk_size <= 500)` in `sync.py` line 5. Users following the README may reject valid values (e.g., 200) or mistakenly rely on invalid defaults.
+
+9. README omits the need for an `auth_token` when calling `connect`, causing runtime failures (`TypeError: connect() missing 1 required positional argument: 'auth_token'`).  
+   • Evidence: Any direct execution of the documented example reproduces the issue.  
+   • Code reference: `sync.py` lines 14-22.
+
+10. README states `retry_limit` default is `3`; actual default is `config.MAX_RETRIES = 10` (`config.py` line 1). This affects operational expectations and error budgets.  
+
+11. README prescribes asynchronous behavior (`async_mode=True`). Implementation’s synchronous default (`mode="sync"`) contradicts the narrative and leads to confusion about how to trigger async behavior.  
+   • Code reference: `sync.py` lines 24-30.
