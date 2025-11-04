@@ -1,0 +1,14 @@
+# Core testing framework
+pytest==8.4.2
+pluggy==1.6.0
+iniconfig==2.1.0
+packaging==25.0
+
+# For datasync library (if it was on PyPI)
+# datasync==0.0.1.dev0
+
+# Standard library dependencies (no external dependencies needed for the core library)
+# The datasync library itself has no external dependencies based on the source code
+
+# Development dependencies
+# None required for basic functionality

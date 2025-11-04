@@ -1,4 +1,4 @@
-from datasync.config import MAX_RETRIES
+from config import MAX_RETRIES
 
 class SyncManager:
     def __init__(self, chunk_size: int = 100, retry_limit: int = MAX_RETRIES, enable_cache: bool = False):

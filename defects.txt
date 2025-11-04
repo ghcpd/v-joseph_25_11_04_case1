@@ -1,0 +1,165 @@
+DEFECTS REPORT: datasync Library Documentation Inconsistencies
+================================================================
+
+SUMMARY:
+--------
+Total defects found: 10
+Critical (prevents code execution): 4
+Major (incorrect documentation): 6
+
+DETAILED DEFECT LIST:
+=====================
+
+DEFECT #1: Parameter Name Mismatch (CRITICAL)
+----------------------------------------------
+Location: README.md "Usage Example" & "API Reference"
+Issue: README uses 'batch_size' parameter
+Actual: sync.py uses 'chunk_size' parameter
+
+README.md Line: manager = SyncManager(batch_size=50, retry_limit=3)
+sync.py Line 4: def __init__(self, chunk_size: int = 100, ...)
+
+Impact: TypeError when following README example
+Error: TypeError: SyncManager.__init__() got an unexpected keyword argument 'batch_size'
+
+
+DEFECT #2: Default Value Mismatch (MAJOR)
+------------------------------------------
+Location: README.md "API Reference" vs sync.py
+Issue: Different default values for batch_size/chunk_size
+
+README.md: batch_size: int = 50
+sync.py Line 4: chunk_size: int = 100
+
+Impact: Users expect default of 50 but actually get 100
+
+
+DEFECT #3: Parameter Range Mismatch (MAJOR)
+--------------------------------------------
+Location: README.md "API Reference" vs sync.py
+Issue: Documented range differs from validated range
+
+README.md: "must be between 10 and 100"
+sync.py Line 5: if not (1 <= chunk_size <= 500)
+
+Impact: Users may avoid valid values (1-9, 101-500) or expect invalid values to work
+
+
+DEFECT #4: Missing Required Parameter (CRITICAL)
+-------------------------------------------------
+Location: README.md "connect()" method documentation
+Issue: 'auth_token' parameter is required but not documented
+
+README.md: connect(remote_url: str, timeout: float = 1.5)
+sync.py Line 11: def connect(self, remote_url: str, auth_token: str, timeout: int = 2)
+
+Impact: TypeError when calling connect() without auth_token
+Error: connect() missing 1 required positional argument: 'auth_token'
+
+
+DEFECT #5: Parameter Type Mismatch (MAJOR)
+-------------------------------------------
+Location: README.md "connect()" method
+Issue: 'timeout' parameter type differs
+
+README.md: timeout: float = 1.5
+sync.py Line 11: timeout: int = 2
+
+Impact: Type confusion; implementation accepts float but declares int
+
+
+DEFECT #6: Default Value Mismatch - timeout (MAJOR)
+----------------------------------------------------
+Location: README.md vs sync.py
+Issue: Different default timeout values
+
+README.md: timeout: float = 1.5
+sync.py Line 11: timeout: int = 2
+
+Impact: Users expect 1.5 seconds but get 2 seconds
+
+
+DEFECT #7: Parameter Name Mismatch - push() (CRITICAL)
+-------------------------------------------------------
+Location: README.md "push()" method vs sync.py
+Issue: Different parameter names
+
+README.md: push(data: dict, async_mode: bool = True)
+sync.py Line 17: def push(self, data: dict, mode: str = "sync")
+
+Impact: TypeError when using async_mode parameter
+Error: push() got an unexpected keyword argument 'async_mode'
+
+
+DEFECT #8: Parameter Type and Default Mismatch (MAJOR)
+-------------------------------------------------------
+Location: README.md "push()" method vs sync.py
+Issue: Different parameter types and default values
+
+README.md: async_mode: bool = True (boolean with True default)
+sync.py Line 17: mode: str = "sync" (string with "sync" default)
+
+Impact: Different behavior - README implies async by default, code does sync by default
+
+
+DEFECT #9: Attribute Access Method Mismatch (CRITICAL)
+-------------------------------------------------------
+Location: README.md "Usage Example"
+Issue: Accessing synced_count as attribute instead of method
+
+README.md Line: print("Sync completed:", manager.synced_count)
+sync.py Line 22-23: def get_synced_count(self) -> int: return self._synced
+
+Impact: AttributeError when accessing synced_count
+Error: 'SyncManager' object has no attribute 'synced_count'
+Correct usage: manager.get_synced_count()
+
+
+DEFECT #10: Undocumented Default Source (INFORMATIONAL)
+--------------------------------------------------------
+Location: README.md "API Reference" vs config.py
+Issue: retry_limit default references MAX_RETRIES from config
+
+README.md: retry_limit: int = 3
+sync.py Line 4: retry_limit: int = MAX_RETRIES
+config.py: MAX_RETRIES = 10
+
+Impact: Default is actually 10, not 3 as shown in README
+
+
+ADDITIONAL OBSERVATIONS:
+========================
+
+1. Module Import Issue:
+   - sync.py originally imported: from datasync.config import MAX_RETRIES
+   - This doesn't match the package structure (no datasync package exists)
+   - Should be: from config import MAX_RETRIES
+
+2. Unused Module:
+   - metrics.py exists with get_latency() function but is never imported or used
+   - Not documented in README.md
+
+3. Return Value Documentation:
+   - README.md doesn't document that push() returns a dict with status and count
+   - Actual: return {"status": "ok", "count": self._synced}
+
+4. Exception Documentation:
+   - README mentions ConnectionError for connect() which is correct
+   - ValueError for invalid mode in push() is not documented
+   - ValueError for invalid chunk_size is not documented
+
+
+VERIFICATION METHOD:
+====================
+All defects verified by:
+1. Running exact README example code (test_readme_example.py) - resulted in multiple TypeErrors
+2. Comparing README.md documentation with actual source code implementation
+3. Testing corrected version (test_readme_corrected.py) - executes successfully
+
+
+IMPACT SUMMARY:
+===============
+- 4 Critical defects prevent README example from running
+- 6 Major defects cause incorrect expectations about behavior
+- Documentation is essentially unusable without corrections
+- All code examples in README.md fail when executed as written
