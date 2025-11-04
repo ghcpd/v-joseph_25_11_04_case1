@@ -1,0 +1,103 @@
+Documentation vs Implementation Defects Report
+=============================================
+
+Legend: README line numbers reference current README.md. Source line numbers reference the file contents at time of analysis.
+
+1. Import Exposure
+   - README (line 17): `from datasync import SyncManager`
+   - Issue: `__init__.py` was empty; `SyncManager` not exported. Import would fail.
+   - Source: `sync.py` defines class `SyncManager` (lines 1-15). `__init__.py` (empty before patch).
+   - Fix: Export `SyncManager` in `__init__.py`.
+
+2. Constructor Parameter Name Mismatch
+   - README (line 35): Signature shows `SyncManager(batch_size: int = 50, retry_limit: int = 3, enable_cache: bool = False)`.
+   - Source (sync.py line 4): `__init__(self, chunk_size: int = 100, retry_limit: int = MAX_RETRIES, enable_cache: bool = False)`.
+   - Issues:
+     a) `batch_size` vs `chunk_size` (name mismatch).
+     b) Default `50` vs actual `100`.
+     c) Default `retry_limit` `3` vs actual `MAX_RETRIES=10` (config.py line 1).
+
+3. Constructor Range Constraint Discrepancy
+   - README (line 36): batch_size must be between 10 and 100.
+   - Source (sync.py lines 5-6): validates `1 <= chunk_size <= 500`.
+   - Issue: Documented range narrower and different lower/upper bounds.
+
+4. Missing Documented Constant
+   - README: Does not mention `MAX_RETRIES` constant from config.py (line 1) used for default.
+   - Issue: Omission of configuration constant explanation.
+
+5. connect() Signature Mismatch
+   - README (line 40): `connect(remote_url: str, timeout: float = 1.5)`.
+   - Source (sync.py line 11): `connect(self, remote_url: str, auth_token: str, timeout: int = 2)`.
+   - Issues:
+     a) Missing required `auth_token` parameter in README.
+     b) Timeout type documented as float default 1.5 vs actual int default 2.
+
+6. connect() Behavior Description Inaccurate
+   - README (lines 41-42): States raises `ConnectionError` if unreachable.
+   - Source (sync.py lines 11-16): Only validates URL starts with https://; no network reachability check.
+   - Issue: Overstates behavior (no connectivity test implemented).
+
+7. push() Signature Mismatch
+   - README (line 44): `push(data: dict, async_mode: bool = True)`.
+   - Source (sync.py line 18): `push(self, data: dict, mode: str = "sync")` with allowed values 'sync' or 'async'.
+   - Issues:
+     a) Parameter name `async_mode` vs `mode`.
+     b) Boolean vs string enumeration.
+     c) Default `True` vs default "sync".
+
+8. push() Return Value Undocumented
+   - README (lines 44-45): Only describes asynchronous push; no return value described.
+   - Source (sync.py lines 18-23): Returns dict `{"status": "ok", "count": self._synced}`.
+   - Issue: Missing return value documentation.
+
+9. Synced Count Attribute Mismatch
+   - README (line 28): Uses `manager.synced_count` attribute.
+   - Source: Internal counter stored as `_synced` with accessor `get_synced_count()` (sync.py lines 3, 25-26). No `synced_count` attribute.
+   - Issue: Attribute name incorrect and missing guidance to use method.
+
+10. Example Missing auth_token
+    - README (lines 21-24): Calls `manager.connect(remote_url=..., timeout=1.5)`.
+    - Source: Requires `auth_token` positional argument before timeout (sync.py line 11).
+    - Issue: Example would raise `TypeError` due to missing argument.
+
+11. Example Uses async_mode Boolean
+    - README (line 26): `manager.push(..., async_mode=True)`.
+    - Source: Expects `mode="async"` (sync.py line 18). Passing `async_mode` would raise `TypeError` (unexpected keyword).
+    - Issue: Incorrect keyword and type.
+
+12. Timeout Type Difference
+    - README (lines 22-23 & line 40): Uses `1.5` float.
+    - Source: Annotated `timeout: int = 2` (sync.py line 11). Float accepted but contradicts annotation.
+    - Issue: Type mismatch documentation vs annotation.
+
+13. Absent Cache Behavior Details
+    - README (line 35): Mentions `enable_cache` but offers no description of effects.
+    - Source: Parameter stored but never used (sync.py lines 4, 8-10). No caching implemented.
+    - Issue: Implies a feature not implemented.
+
+14. Missing Metrics Documentation
+    - README: No mention of `metrics.get_latency()` (metrics.py lines 1-4).
+    - Issue: Incomplete API reference.
+
+15. Installation Instruction Potentially Misleading
+    - README (lines 8-9): `pip install datasync` suggests published package.
+    - Source: Local library; no packaging metadata present (no setup/pyproject). Import path works only after adding export; may not be on PyPI.
+    - Issue: Could mislead users expecting external distribution.
+
+16. Missing Return Description for connect()
+    - README: No return value description.
+    - Source: Returns True on success (sync.py line 15).
+    - Issue: Undocumented boolean return.
+
+17. No Error Cases Documented for push()
+    - README: Does not specify invalid mode error.
+    - Source: Raises ValueError for invalid mode (sync.py lines 18-20).
+    - Issue: Missing error condition.
+
+18. Unspecified Accepted Modes Set
+    - README: Implies asynchronous only.
+    - Source: Accepts 'sync' or 'async'.
+    - Issue: Missing enumeration of accepted modes.
+
+Summary: 18 distinct documentation defects identified; corrected README provided separately.
